@@ -1,60 +1,70 @@
-import os
-import sys
+from __future__ import annotations
+from typing import Literal, Optional
+from pydantic import BaseModel, Field
+
  
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
- 
-from contextlib import asynccontextmanager
- 
-import numpy as np
-import uvicorn
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
- 
-from backend.routers import hazard
-from backend.state import AppState
+ModelType  = Literal["static", "dynamic"]
+RiskLabel  = Literal["safe", "moderate", "danger"]
  
  
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    AppState.load()
-    yield
- 
-app = FastAPI(
-    title="Lunar Hazard API",
-    version="1.0.0",
-    lifespan=lifespan,
-)
- 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
- 
-app.include_router(hazard.router,  prefix="/hazard",  tags=["Hazard"])
+class PixelRiskRequest(BaseModel):
+    row:   int       = Field(..., ge=0, description="Pixel row (full-res grid)")
+    col:   int       = Field(..., ge=0, description="Pixel column (full-res grid)")
+    model: ModelType = Field("static", description="Which risk model to use")
  
  
-@app.get("/", tags=["Health"])
-def root():
-    return {
-        "status": "ok",
-        "service": "Lunar Hazard API",
-        "version": "1.0.0",
-        "assets_loaded": AppState.ready,
-    }
+class PixelRiskResponse(BaseModel):
+    row:        int
+    col:        int
+    model:      ModelType
+    risk_class: int        = Field(..., description="0=Safe, 1=Moderate, 2=Danger")
+    risk_label: RiskLabel
+    risk_norm:  float      = Field(..., description="Normalised score 0–1")
  
  
-@app.get("/health", tags=["Health"])
-def health():
-    return {
-        "status": "ok",
-        "static_map":  AppState.static_map  is not None,
-        "dynamic_map": AppState.dynamic_map is not None,
-        "features":    AppState.features    is not None,
-    }
+class RiskStatsResponse(BaseModel):
+    model:         ModelType
+    shape:         list[int]
+    safe_pct:      float = Field(..., description="% pixels class 0")
+    moderate_pct:  float = Field(..., description="% pixels class 1")
+    danger_pct:    float = Field(..., description="% pixels class 2")
  
  
-if __name__ == "__main__":
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
+class PredictRequest(BaseModel):
+    model:          ModelType = "static"
+    elevation:      float
+    slope:          float
+    roughness:      float
+    curvature:      float
+    tpi:            float
+    tri:            float
+    
+    temp_day:       Optional[float] = None
+    temp_night:     Optional[float] = None
+    temp_variation: Optional[float] = None
+    temp_gradient:  Optional[float] = None
+ 
+ 
+class PredictResponse(BaseModel):
+    model:      ModelType
+    risk_class: int
+    risk_label: RiskLabel
+    confidence: float = Field(..., description="Model probability for predicted class")
+ 
+ 
+class TerrainRequest(BaseModel):
+    row: int = Field(..., ge=0)
+    col: int = Field(..., ge=0)
+ 
+ 
+class TerrainResponse(BaseModel):
+    row:       int
+    col:       int
+    elevation: float
+    slope:     float
+    roughness: float
+    curvature: float
+    tpi:       float
+    tri:       float
+ 
  
