@@ -21,7 +21,6 @@ risk_map = np.load(map_path)
 risk_norm = risk_map.astype(np.float32) / 2.0
 
 
-
 REGIONS = {
     
     "Apollo 17 (Taurus-Littrow)": (20.19,   30.77,  1, "Moderate"),
