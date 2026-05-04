@@ -1,6 +1,5 @@
 import os
 import sys
- 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
  
 from contextlib import asynccontextmanager
@@ -9,10 +8,12 @@ import numpy as np
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
- 
+
+
 from backend.routers import hazard
 from backend.state import AppState
- 
+from backend.routers.navigation import router as nav_router
+
  
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,7 +34,7 @@ app.add_middleware(
 )
  
 app.include_router(hazard.router,  prefix="/hazard",  tags=["Hazard"])
- 
+app.include_router(nav_router)
  
 @app.get("/", tags=["Health"])
 def root():
@@ -53,7 +54,7 @@ def health():
         "dynamic_map": AppState.dynamic_map is not None,
         "features":    AppState.features    is not None,
     }
- 
+
  
 if __name__ == "__main__":
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
