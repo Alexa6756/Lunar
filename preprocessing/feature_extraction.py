@@ -2,6 +2,7 @@ import numpy as np
 import rasterio
 from scipy.ndimage import uniform_filter
 
+
 def extract_features(dem_path: str,
                      temp_day_path: str = None,
                      temp_night_path: str = None) -> dict:
@@ -36,6 +37,7 @@ def extract_features(dem_path: str,
 
         with rasterio.open(temp_night_path) as src:
             temp_night = src.read(1).astype(np.float32)
+
 
         temp_variation = temp_day - temp_night
 
